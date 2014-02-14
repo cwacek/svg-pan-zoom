@@ -44,6 +44,7 @@ svgPanZoom = function(){
   var minZoom = 0.5; // Minimum Zoom
   var maxZoom = 10; // Maximum Zoom
   var onZoom = null; // Zoom callback
+  var onPanComplete = null; // Pan callback
 
   /// <====
   /// END OF CONFIGURATION 
@@ -69,6 +70,9 @@ svgPanZoom = function(){
       }
       if (args.hasOwnProperty('onZoom')) {
         onZoom = args.onZoom;
+      }
+      if (args.hasOwnProperty('onPanComplete')) {
+        onPanComplete = args.onPanComplete
       }
       if (args.hasOwnProperty('minZoom')) {
         minZoom = args.minZoom;
@@ -393,6 +397,10 @@ svgPanZoom = function(){
       viewportCTM.e += tx;
       viewportCTM.f += ty;
       setCTM(viewport, viewportCTM);
+
+      if (onPanComplete) { 
+        onPanComplete([viewportCTM.e, viewportCTM.f], viewportCTM);
+      }
     });
   }
 
@@ -406,7 +414,7 @@ svgPanZoom = function(){
       if ( viewportCTM.a < minZoom ) { viewportCTM.a = viewportCTM.d = minZoom ; } 
       if ( viewportCTM.a > maxZoom ) { viewportCTM.a = viewportCTM.d = maxZoom ; } 
       setCTM(viewport, viewportCTM);
-      if (onZoom) { onZoom(viewportCTM.a); }
+      if (onZoom) { onZoom(viewportCTM.a, viewportCTM); }
     });
   }
 
@@ -419,7 +427,7 @@ svgPanZoom = function(){
       viewportCTM.a = viewportCTM.d = (1 + zoomScaleSensitivity) * viewportCTM.a;
       if ( viewportCTM.a > maxZoom ) { viewportCTM.a = viewportCTM.d = maxZoom ; }
       setCTM(viewport, viewportCTM);
-      if (onZoom) { onZoom(viewportCTM.a); }
+      if (onZoom) { onZoom(viewportCTM.a, viewportCTM); }
     });
   }
 
@@ -432,7 +440,7 @@ svgPanZoom = function(){
       viewportCTM.a = viewportCTM.d = (1/(1 + zoomScaleSensitivity)) * viewportCTM.a;
       if ( viewportCTM.a < minZoom ) { viewportCTM.a = viewportCTM.d = minZoom ; } 
       setCTM(viewport, viewportCTM);
-      if (onZoom) { onZoom(viewportCTM.a); }
+      if (onZoom) { onZoom(viewportCTM.a, viewportCTM); }
     });
   }
 
@@ -450,7 +458,7 @@ svgPanZoom = function(){
       newCTM.e = oldCTM.e * newScale - (boundingClientRect.width - bBox.width * newScale)/2 - bBox.x * newScale; //x-transform
       newCTM.f = oldCTM.f * newScale - (boundingClientRect.height - bBox.height * newScale)/2 - bBox.y * newScale; //y-transform
       setCTM(viewport, newCTM);
-      if (onZoom) { onZoom(newCTM.a); }
+      if (onZoom) { onZoom(newCTM.a, newCTM); }
     });
   }
 
@@ -499,7 +507,7 @@ svgPanZoom = function(){
       stateTf = g.getCTM().inverse();
 
     stateTf = stateTf.multiply(k.inverse());
-    if (onZoom) { onZoom(g.getCTM().a); }
+    if (onZoom) { onZoom(g.getCTM().a, g.getCTM()); }
   }
 
   /**
@@ -575,7 +583,7 @@ svgPanZoom = function(){
       stateTf = g.getCTM().inverse();
 
     stateTf = stateTf.multiply(k.inverse());
-    if (onZoom) { onZoom(g.getCTM().a); }
+    if (onZoom) { onZoom(g.getCTM().a, g.getCTM()); }
   }
   
   /**
@@ -635,8 +643,15 @@ svgPanZoom = function(){
 
     var svg = (evt.target.tagName === 'svg' || evt.target.tagName === 'SVG') ? evt.target : evt.target.ownerSVGElement || evt.target.correspondingElement.ownerSVGElement;
 
-    if(state == 'pan' || state == 'drag') {
+    if(state == 'pan') {
+      if (onPanComplete) { 
+        onPanComplete([viewportCTM.e, viewportCTM.f], viewportCTM);
+      }
       // Quit pan mode
+      state = '';
+    }
+    else if (state == 'drag') {
+      // Quit drag mode
       state = '';
     }
   }
@@ -658,6 +673,8 @@ svgPanZoom = function(){
     enableZoom:enableZoom,
     disableZoom:disableZoom,
     enableDrag:enableDrag,
-    disableDrag:disableDrag
+    disableDrag:disableDrag,
+    set_transform: setCTM,
+    getSVGViewport: getViewport
   };
 }();
